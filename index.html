@@ -175,12 +175,16 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
   flex:1;display:flex;align-items:center;justify-content:center;
   min-height:0;padding:8px;
 }
-.board-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
-#battle-canvas,#learn-canvas{
-  display:block;
-  max-width:min(calc(100vw - 16px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 160px));
-  max-height:min(calc(100vw - 16px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 160px));
-  width:100%;height:auto;touch-action:none;cursor:pointer;border-radius:6px;
+.board-wrap{position:relative;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+#battle-canvas{
+  display:block;touch-action:none;cursor:pointer;
+  width: min(calc(100vw - 8px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 180px));
+  height:min(calc(100vw - 8px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 180px));
+}
+#learn-canvas{
+  display:block;touch-action:none;cursor:pointer;
+  width: min(calc(100vw - 8px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 240px));
+  height:min(calc(100vw - 8px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 240px));
 }
 
 /* ─── Status bar ─── */
@@ -434,8 +438,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-
   </div>
 
   <div style="display:flex;gap:12px;width:100%;max-width:420px">
-    <button class="btn btn-ghost btn-full" onclick="startBattle('black')" style="flex:1">执黑先行</button>
-    <button class="btn btn-primary btn-full" onclick="startBattle('white')" style="flex:1">执白后手</button>
+    <button class="btn btn-ghost btn-full" onclick="startBattle('black')" style="flex:1">执黑后手</button>
+    <button class="btn btn-primary btn-full" onclick="startBattle('white')" style="flex:1">执白先行</button>
   </div>
   <div style="font-size:.72rem;color:var(--text-dim);margin-top:10px;text-align:center">国际象棋白方先行，执白 = 你先走</div>
 </div>
@@ -605,207 +609,190 @@ const PIECE_UNICODE = {
   bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟'
 };
 
+// ── SVG piece image cache
+const _pieceImgs = {};
+const _PIECE_KEYS = ['wK','wQ','wR','wB','wN','wP','bK','bQ','bR','bB','bN','bP'];
+function preloadPieces(cb) {
+  let done = 0, total = _PIECE_KEYS.length;
+  _PIECE_KEYS.forEach(key => {
+    const img = new Image();
+    img.onload  = () => { _pieceImgs[key] = img; if (++done === total && cb) cb(); };
+    img.onerror = () => { if (++done === total && cb) cb(); };
+    img.src = `piece-${key}.svg`;
+  });
+}
+preloadPieces(); // start loading; fallback to Unicode while loading
+
 class ChessRenderer {
   constructor(canvas) {
     this.canvas = canvas;
-    this.ctx = canvas.getContext('2d');
-    this.flipped = false;
+    this.ctx    = canvas.getContext('2d');
+    this.flipped    = false;
     this.selectedSq = null;
-    this.legalSqs = [];
-    this.lastMove = null;
-    this.hintSq = null;
-    this._size = 0;
-    this._sq = 0;
-    this._ox = 0;
-    this._oy = 0;
+    this.legalSqs   = [];
+    this.lastMove   = null;
+    this.hintSq     = null;
+    this._sz = 0; this._sq = 0; this._ox = 0; this._oy = 0; this._dpr = 1;
   }
 
   setup() {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr  = window.devicePixelRatio || 1;
     const rect = this.canvas.getBoundingClientRect();
-    const sz = Math.min(rect.width || 320, rect.height || 320);
-    this.canvas.width  = sz * dpr;
-    this.canvas.height = sz * dpr;
-    this.canvas.style.width  = sz + 'px';
-    this.canvas.style.height = sz + 'px';
-    this._size = sz * dpr;
-    // board is ~88% of canvas
-    const board = this._size * 0.88;
-    this._sq = board / 8;
-    this._ox = (this._size - board) / 2;
-    this._oy = (this._size - board) / 2;
-    this.ctx.scale(dpr, dpr);
+    const sz   = Math.max(160, Math.min(rect.width || 300, rect.height || 300));
+    this.canvas.width  = Math.round(sz * dpr);
+    this.canvas.height = Math.round(sz * dpr);
+    // ctx transform: all draw calls use CSS-pixel coords
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     this._dpr = dpr;
+    this._sz  = sz;
+    // Padding for coordinate labels (rank left + file bottom)
+    const pad = Math.max(14, sz * 0.058);
+    this._ox  = pad;
+    this._oy  = sz * 0.01;
+    this._sq  = (sz - pad - sz * 0.01) / 8;
   }
 
-  // convert rank/file to pixel center
-  sqCenter(file, rank) {
-    const f = this.flipped ? 7 - file : file;
-    const r = this.flipped ? rank : 7 - rank;
-    const sq = this._sq / this._dpr;
-    const ox = this._ox / this._dpr;
-    const oy = this._oy / this._dpr;
-    return { x: ox + f * sq + sq / 2, y: oy + r * sq + sq / 2 };
-  }
+  sqName(file, rank) { return 'abcdefgh'[file] + (rank + 1); }
 
-  // get file/rank from pointer event
   getSq(ex, ey) {
     const rect = this.canvas.getBoundingClientRect();
-    const sq   = this._sq / this._dpr;
-    const ox   = this._ox / this._dpr;
-    const oy   = this._oy / this._dpr;
-    const px   = ex - rect.left;
-    const py   = ey - rect.top;
-    const fi = Math.floor((px - ox) / sq);
-    const ri = Math.floor((py - oy) / sq);
+    const px   = ex - rect.left - this._ox;
+    const py   = ey - rect.top  - this._oy;
+    const fi   = Math.floor(px / this._sq);
+    const ri   = Math.floor(py / this._sq);
     if (fi < 0 || fi > 7 || ri < 0 || ri > 7) return null;
     const file = this.flipped ? 7 - fi : fi;
-    const rank = this.flipped ? ri : 7 - ri;
+    const rank = this.flipped ? ri     : 7 - ri;
     return { file, rank };
   }
 
-  sqName(file, rank) {
-    return 'abcdefgh'[file] + (rank + 1);
-  }
-
   draw(chess) {
-    const ctx  = this.ctx;
-    const dpr  = this._dpr;
-    const W    = this._size / dpr;
-    const sq   = this._sq / dpr;
-    const ox   = this._ox / dpr;
-    const oy   = this._oy / dpr;
+    const ctx = this.ctx;
+    const W   = this._sz;
+    const sq  = this._sq;
+    const ox  = this._ox;
+    const oy  = this._oy;
 
     ctx.clearRect(0, 0, W, W);
-
-    // ── Background
     ctx.fillStyle = '#13131f';
     ctx.fillRect(0, 0, W, W);
 
-    // ── Coordinates labels
-    const labelFont = Math.max(9, sq * 0.28);
-    ctx.font = `600 ${labelFont}px -apple-system,sans-serif`;
-    ctx.fillStyle = '#8888b0';
+    // ── Coordinate labels
+    const lblSz = Math.max(10, sq * 0.30);
+    ctx.font = `700 ${lblSz}px -apple-system,sans-serif`;
+    ctx.textBaseline = 'middle';
     for (let i = 0; i < 8; i++) {
       const fi = this.flipped ? 7 - i : i;
-      const ri = this.flipped ? i : 7 - i;
-      // file labels bottom
+      const ri = this.flipped ? i     : 7 - i;
+      // rank numbers (left side)
+      ctx.fillStyle = ((fi + ri) % 2 === 0) ? '#d4b896' : '#b07040';
       ctx.textAlign = 'center';
-      ctx.fillText('abcdefgh'[fi], ox + i * sq + sq / 2, oy + 8 * sq + sq * 0.55);
-      // rank labels left
-      ctx.textAlign = 'right';
-      ctx.fillText(ri + 1, ox - sq * 0.15, oy + i * sq + sq / 2 + labelFont * 0.35);
+      ctx.fillText(ri + 1, ox * 0.52, oy + i * sq + sq / 2);
+      // file letters (bottom)
+      ctx.fillStyle = ((fi + (7 - i)) % 2 === 0) ? '#d4b896' : '#b07040';
+      ctx.textAlign = 'center';
+      ctx.fillText('abcdefgh'[fi], ox + i * sq + sq / 2, oy + 8 * sq + sq * 0.45);
     }
 
     // ── Squares
     for (let r = 0; r < 8; r++) {
       for (let f = 0; f < 8; f++) {
-        const fi = this.flipped ? 7 - f : f;
-        const ri = this.flipped ? r : 7 - r;
-        const sqName = this.sqName(fi, ri);
+        const fi     = this.flipped ? 7 - f : f;
+        const ri     = this.flipped ? r     : 7 - r;
+        const name   = this.sqName(fi, ri);
         const isLight = (fi + ri) % 2 === 0;
-        const x = ox + f * sq;
-        const y = oy + r * sq;
+        const x = ox + f * sq, y = oy + r * sq;
 
-        // base color
-        let col = isLight ? '#d4b896' : '#8b5e3c';
-
-        // last move highlight
-        if (this.lastMove && (sqName === this.lastMove.from || sqName === this.lastMove.to)) {
-          col = isLight ? '#f6f669' : '#bbc926';
-        }
-
+        // base square color
+        let col = isLight ? '#f0d9b5' : '#b58863';
+        if (this.lastMove && (name===this.lastMove.from||name===this.lastMove.to))
+          col = isLight ? '#cdd26a' : '#aaa23a';
         ctx.fillStyle = col;
         ctx.fillRect(x, y, sq, sq);
 
-        // selected
-        if (this.selectedSq && sqName === this.selectedSq) {
-          ctx.fillStyle = 'rgba(100,200,100,.55)';
+        // selected overlay
+        if (this.selectedSq === name) {
+          ctx.fillStyle = 'rgba(20,155,20,.5)';
           ctx.fillRect(x, y, sq, sq);
         }
-
-        // hint
-        if (this.hintSq && sqName === this.hintSq) {
+        // hint overlay
+        if (this.hintSq === name) {
           ctx.fillStyle = 'rgba(251,191,36,.55)';
           ctx.fillRect(x, y, sq, sq);
         }
-
-        // legal move dots
-        if (this.legalSqs.includes(sqName)) {
-          const piece = chess.get(sqName);
-          if (piece) {
-            // ring for capture
-            ctx.strokeStyle = 'rgba(0,0,0,.35)';
-            ctx.lineWidth = sq * 0.08;
-            ctx.beginPath();
-            ctx.arc(x + sq/2, y + sq/2, sq * 0.44, 0, Math.PI*2);
-            ctx.stroke();
+        // legal move indicator
+        if (this.legalSqs.includes(name)) {
+          const cx2 = x + sq/2, cy2 = y + sq/2;
+          if (chess.get(name)) {
+            ctx.strokeStyle = 'rgba(0,0,0,.4)';
+            ctx.lineWidth   = sq * 0.095;
+            ctx.beginPath(); ctx.arc(cx2, cy2, sq*0.46, 0, Math.PI*2); ctx.stroke();
           } else {
-            ctx.fillStyle = 'rgba(0,0,0,.2)';
-            ctx.beginPath();
-            ctx.arc(x + sq/2, y + sq/2, sq * 0.14, 0, Math.PI*2);
-            ctx.fill();
+            ctx.fillStyle = 'rgba(0,0,0,.18)';
+            ctx.beginPath(); ctx.arc(cx2, cy2, sq*0.155, 0, Math.PI*2); ctx.fill();
           }
+        }
+      }
+    }
+
+    // ── Check highlight
+    if (chess.in_check()) {
+      const bd = chess.board(), turn = chess.turn();
+      outer: for (let r=0;r<8;r++) for (let f=0;f<8;f++) {
+        const p = bd[r][f];
+        if (p && p.color===turn && p.type==='k') {
+          const fi = this.flipped ? 7-f : f;
+          const ri = this.flipped ? r   : 7-r;
+          const x  = ox + fi*sq, y = oy + ri*sq;
+          ctx.fillStyle = 'rgba(220,30,30,.38)';
+          ctx.fillRect(x, y, sq, sq);
+          break outer;
         }
       }
     }
 
     // ── Pieces
-    const fontSize = sq * 0.78;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
     for (let r = 0; r < 8; r++) {
       for (let f = 0; f < 8; f++) {
-        const fi = this.flipped ? 7 - f : f;
-        const ri = this.flipped ? r : 7 - r;
-        const sqName = this.sqName(fi, ri);
-        const piece = chess.get(sqName);
+        const fi   = this.flipped ? 7 - f : f;
+        const ri   = this.flipped ? r     : 7 - r;
+        const piece = chess.get(this.sqName(fi, ri));
         if (!piece) continue;
-        const key = piece.color + piece.type.toUpperCase();
-        const sym = PIECE_UNICODE[key];
-        if (!sym) continue;
-        const cx = ox + f * sq + sq / 2;
-        const cy = oy + r * sq + sq / 2;
-        // shadow
-        ctx.font = `${fontSize}px serif`;
-        ctx.fillStyle = 'rgba(0,0,0,.4)';
-        ctx.fillText(sym, cx + sq*0.03, cy + sq*0.04);
-        // piece
-        ctx.fillStyle = piece.color === 'w' ? '#fffef0' : '#1a1a1a';
-        if (piece.color === 'w') {
-          ctx.strokeStyle = '#8b5e3c';
-          ctx.lineWidth = sq * 0.04;
-          ctx.strokeText(sym, cx, cy);
+        const key  = piece.color + piece.type.toUpperCase();
+        const px   = ox + f * sq, py = oy + r * sq;
+        const img  = _pieceImgs[key];
+        if (img) {
+          // SVG piece image
+          const pad = sq * 0.04;
+          ctx.drawImage(img, px + pad, py + pad, sq - pad*2, sq - pad*2);
+        } else {
+          // Unicode fallback — high-quality rendering
+          this._drawUnicodePiece(ctx, piece, px, py, sq);
         }
-        ctx.fillText(sym, cx, cy);
       }
     }
+  }
 
-    // ── Check highlight (king square)
-    if (chess.in_check()) {
-      const board = chess.board();
-      const turn  = chess.turn();
-      outer:
-      for (let r = 0; r < 8; r++) {
-        for (let f = 0; f < 8; f++) {
-          const p = board[r][f];
-          if (p && p.color === turn && p.type === 'k') {
-            const fi = this.flipped ? 7 - f : f;
-            const ri = this.flipped ? r : 7 - r;
-            const df = this.flipped ? f : 7 - r;
-            // recalculate display position
-            const rank = 7 - r;
-            const fIdx = this.flipped ? 7 - f : f;
-            const rIdx = this.flipped ? r : 7 - rank;
-            const x = ox + fIdx * sq;
-            const y = oy + rIdx * sq;
-            ctx.fillStyle = 'rgba(239,68,68,.35)';
-            ctx.fillRect(x, y, sq, sq);
-            break outer;
-          }
-        }
-      }
-    }
+  _drawUnicodePiece(ctx, piece, px, py, sq) {
+    const sym  = PIECE_UNICODE[piece.color + piece.type.toUpperCase()];
+    if (!sym) return;
+    const isW  = piece.color === 'w';
+    const cx   = px + sq / 2;
+    const cy   = py + sq / 2;
+    const fsz  = sq * 0.82;
+    ctx.font         = `${fsz}px serif`;
+    ctx.textAlign    = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Thick outline in contrasting color for visibility on any square
+    ctx.lineWidth   = sq * 0.10;
+    ctx.strokeStyle = isW ? 'rgba(50,25,10,.75)' : 'rgba(255,255,255,.55)';
+    ctx.lineJoin    = 'round';
+    ctx.strokeText(sym, cx, cy + sq * 0.02);
+
+    // Filled piece
+    ctx.fillStyle = isW ? '#fff8e7' : '#1a1008';
+    ctx.fillText(sym, cx, cy + sq * 0.02);
   }
 }
 
@@ -1157,8 +1144,8 @@ async function doAIMove() {
   const skillLevel = battleDiff === 'medium' ? 5 : 20;
   sfSend('setoption name Skill Level value ' + skillLevel);
   sfSend('position fen ' + fen);
-  const depth = battleDiff === 'medium' ? 10 : 18;
-  sfSend('go depth ' + depth);
+  const movetime = battleDiff === 'medium' ? 800 : 1500;
+  sfSend('go movetime ' + movetime);
 }
 
 function applyAIMove(uci) {
