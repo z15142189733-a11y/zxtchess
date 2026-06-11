@@ -1,0 +1,1817 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ZXT Chess">
+<meta name="theme-color" content="#13131f">
+<link rel="manifest" href="chess-manifest.json">
+<link rel="apple-touch-icon" href="chess-icon-192.png">
+<title>ZXT Chess</title>
+<style>
+/* ═══════════════════════════════════════════════
+   CSS VARIABLES — 与 ZXT GO 完全一致
+═══════════════════════════════════════════════ */
+:root {
+  --bg:       #13131f;
+  --bg2:      #1a1a2e;
+  --bg3:      #22223a;
+  --card:     #1e1e30;
+  --border:   rgba(255,255,255,.07);
+  --accent:   #a78bfa;
+  --accent2:  #7c3aed;
+  --text:     #e8e8f0;
+  --text-mid: #c0c0d8;
+  --text-dim: #8888b0;
+  --green:    #4ade80;
+  --red:      #f87171;
+  --gold:     #fbbf24;
+  --radius:   16px;
+  --radius-sm:10px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',sans-serif;overflow:hidden}
+
+/* ═══════════════════════════════════════════════
+   SCREEN SYSTEM
+═══════════════════════════════════════════════ */
+.screen{
+  position:fixed;inset:0;
+  display:none;flex-direction:column;align-items:center;
+  padding:max(20px,env(safe-area-inset-top)) 20px max(20px,env(safe-area-inset-bottom));
+  overflow-y:auto;overflow-x:hidden;
+  background:var(--bg);
+}
+.screen.on{display:flex}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBAR
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:4px}
+
+/* ═══════════════════════════════════════════════
+   TYPOGRAPHY
+═══════════════════════════════════════════════ */
+.screen-title{font-size:1.6rem;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-bottom:4px;text-align:center}
+.screen-sub{font-size:.85rem;color:var(--text-dim);margin-bottom:24px;text-align:center}
+
+/* ═══════════════════════════════════════════════
+   LOGO
+═══════════════════════════════════════════════ */
+.logo-wrap{display:flex;flex-direction:column;align-items:center;margin-bottom:28px;margin-top:8px}
+.logo-icon{width:100px;height:100px;border-radius:22px;box-shadow:0 0 0 3px rgba(167,139,250,.3),0 8px 32px rgba(124,58,237,.25)}
+.logo-title{font-size:2rem;font-weight:900;letter-spacing:-.03em;margin-top:12px;background:linear-gradient(135deg,#a78bfa,#7c3aed);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo-sub{font-size:.8rem;color:var(--text-dim);margin-top:2px}
+
+/* ═══════════════════════════════════════════════
+   CARDS / BUTTONS
+═══════════════════════════════════════════════ */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px 20px;
+  width:100%;max-width:420px;cursor:pointer;
+  transition:transform .15s,box-shadow .15s,border-color .15s;
+  position:relative;overflow:hidden;
+}
+.card:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(124,58,237,.18);border-color:rgba(167,139,250,.25)}
+.card:active{transform:scale(.98)}
+.card-row{display:flex;align-items:center;gap:14px}
+.card-icon{font-size:2rem;flex-shrink:0;width:44px;text-align:center}
+.card-title{font-size:1rem;font-weight:700;color:var(--text);margin-bottom:2px}
+.card-desc{font-size:.78rem;color:var(--text-dim);line-height:1.4}
+.card-arr{margin-left:auto;color:var(--text-dim);font-size:1.1rem;flex-shrink:0}
+.card-badge{
+  position:absolute;top:10px;right:10px;
+  font-size:.6rem;font-weight:700;padding:2px 7px;border-radius:99px;
+  background:rgba(167,139,250,.15);color:var(--accent);border:1px solid rgba(167,139,250,.25);
+}
+
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  border:none;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;
+  transition:opacity .15s,transform .12s;font-size:.9rem;padding:12px 20px;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff}
+.btn-secondary{background:linear-gradient(135deg,#1255b5,#2196f3);color:#fff}
+.btn-ghost{background:var(--bg3);color:var(--text-mid);border:1px solid var(--border)}
+.btn-danger{background:linear-gradient(135deg,#7f1d1d,#ef4444);color:#fff}
+.btn-full{width:100%;max-width:420px}
+
+.back-btn{
+  align-self:flex-start;display:flex;align-items:center;gap:6px;
+  background:none;border:none;color:var(--text-dim);font-size:.85rem;
+  cursor:pointer;padding:4px 0;margin-bottom:16px;font-weight:500;
+  transition:color .15s;
+}
+.back-btn:hover{color:var(--text)}
+
+/* ═══════════════════════════════════════════════
+   DIFFICULTY CHIPS
+═══════════════════════════════════════════════ */
+.diff-grid{display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px}
+.diff-card{
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:16px 20px;cursor:pointer;
+  display:flex;align-items:center;gap:14px;
+  transition:border-color .15s,box-shadow .15s,transform .12s;
+}
+.diff-card:hover{border-color:rgba(167,139,250,.4);box-shadow:0 4px 20px rgba(124,58,237,.15)}
+.diff-card:active{transform:scale(.98)}
+.diff-card.selected{border-color:var(--accent);background:rgba(167,139,250,.07)}
+.diff-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.diff-dot.easy{background:#4ade80}
+.diff-dot.medium{background:#fbbf24}
+.diff-dot.hard{background:#f87171}
+.diff-name{font-size:.95rem;font-weight:700}
+.diff-desc{font-size:.75rem;color:var(--text-dim);margin-top:2px}
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:100;padding:20px;
+}
+.modal-overlay.on{display:flex}
+.modal{
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:28px 24px;max-width:360px;width:100%;text-align:center;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+}
+.modal-icon{font-size:2.8rem;margin-bottom:10px}
+.modal-title{font-size:1.25rem;font-weight:800;margin-bottom:8px}
+.modal-body{font-size:.85rem;color:var(--text-mid);margin-bottom:20px;line-height:1.6}
+.modal-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* ═══════════════════════════════════════════════
+   GAME SCREEN LAYOUT
+═══════════════════════════════════════════════ */
+#battle-screen,#learn-play-screen{
+  padding:0;flex-direction:column;
+  background:var(--bg);
+}
+
+/* ─── Top info bar ─── */
+.game-top{
+  flex-shrink:0;width:100%;
+  display:flex;align-items:center;gap:12px;
+  padding:max(14px,env(safe-area-inset-top)) 16px 10px;
+  background:var(--bg2);border-bottom:1px solid var(--border);
+}
+.game-top-back{background:none;border:none;color:var(--text-dim);font-size:1.2rem;cursor:pointer;padding:4px;flex-shrink:0}
+.game-top-info{flex:1;min-width:0}
+.game-top-title{font-size:.9rem;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.game-top-sub{font-size:.72rem;color:var(--text-dim);margin-top:1px}
+.game-top-right{flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+
+/* ─── Board area ─── */
+.game-main{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  min-height:0;padding:8px;
+}
+.board-wrap{position:relative;display:inline-flex;align-items:center;justify-content:center}
+#battle-canvas,#learn-canvas{
+  display:block;
+  max-width:min(calc(100vw - 16px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 160px));
+  max-height:min(calc(100vw - 16px), calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 160px));
+  width:100%;height:auto;touch-action:none;cursor:pointer;border-radius:6px;
+}
+
+/* ─── Status bar ─── */
+.game-status{
+  flex-shrink:0;width:100%;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:8px 14px;background:var(--bg2);border-top:1px solid var(--border);
+}
+.status-turn{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:600}
+.turn-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0}
+.turn-dot.white{background:radial-gradient(circle at 33% 33%,#fff,#ccc);box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.turn-dot.black{background:radial-gradient(circle at 33% 33%,#444,#111);box-shadow:0 1px 3px rgba(0,0,0,.6)}
+.status-captured{font-size:.72rem;color:var(--text-dim)}
+.status-msg{font-size:.72rem;color:var(--accent);font-weight:600;text-align:right}
+
+/* ─── Bottom action bar ─── */
+.game-bottom{
+  flex-shrink:0;width:100%;
+  display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  padding:8px 12px max(8px,env(safe-area-inset-bottom));
+  background:var(--bg);border-top:1px solid var(--border);
+}
+.game-bottom .btn{padding:11px 8px;font-size:.82rem;border-radius:10px}
+.game-bottom .btn-full-row{grid-column:1/-1}
+
+/* ─── Learn mode hint panel ─── */
+.hint-panel{
+  flex-shrink:0;width:100%;
+  padding:8px 14px;background:rgba(167,139,250,.06);
+  border-top:1px solid rgba(167,139,250,.15);
+  font-size:.8rem;color:var(--text-mid);line-height:1.5;
+  min-height:48px;display:flex;align-items:center;gap:8px;
+}
+.hint-icon{font-size:1.1rem;flex-shrink:0}
+.hint-text{flex:1}
+
+/* ═══════════════════════════════════════════════
+   OPENING TRAINER
+═══════════════════════════════════════════════ */
+.opening-list{display:flex;flex-direction:column;gap:10px;width:100%;max-width:420px}
+.opening-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:14px 16px;cursor:pointer;
+  display:flex;align-items:center;gap:12px;
+  transition:border-color .15s,transform .12s;
+}
+.opening-card:hover{border-color:rgba(167,139,250,.35);transform:translateX(3px)}
+.opening-card:active{transform:scale(.98)}
+.op-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0}
+.op-name{font-size:.9rem;font-weight:700;color:var(--text)}
+.op-sub{font-size:.72rem;color:var(--text-dim);margin-top:1px}
+.op-moves{font-size:.68rem;color:var(--text-dim);margin-left:auto;flex-shrink:0}
+
+/* ═══════════════════════════════════════════════
+   PUZZLE LIST
+═══════════════════════════════════════════════ */
+.puzzle-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  width:100%;max-width:420px;
+}
+.puzzle-cell{
+  aspect-ratio:1;border-radius:10px;background:var(--bg3);
+  border:1.5px solid var(--border);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;cursor:pointer;
+  transition:border-color .15s,transform .12s;font-size:.75rem;font-weight:700;
+  position:relative;
+}
+.puzzle-cell:hover{border-color:rgba(167,139,250,.4);transform:scale(1.04)}
+.puzzle-cell:active{transform:scale(.96)}
+.puzzle-cell.done{background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.35);color:var(--green)}
+.puzzle-cell.wrong{background:rgba(248,113,113,.08);border-color:rgba(248,113,113,.3)}
+.puzzle-cell .pz-num{font-size:.85rem;font-weight:800;color:var(--text)}
+.puzzle-cell .pz-stars{font-size:.6rem;margin-top:2px;letter-spacing:1px}
+.puzzle-cell.done .pz-num{color:var(--green)}
+.puzzle-diff-badge{position:absolute;top:4px;right:4px;width:6px;height:6px;border-radius:50%}
+
+/* ═══════════════════════════════════════════════
+   PROGRESS BAR (opening trainer)
+═══════════════════════════════════════════════ */
+.prog-bar-wrap{width:100%;max-width:420px;margin-bottom:10px}
+.prog-bar-bg{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.prog-bar-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width .3s}
+.prog-label{font-size:.7rem;color:var(--text-dim);margin-top:4px;display:flex;justify-content:space-between}
+
+/* ═══════════════════════════════════════════════
+   AI THINKING SPINNER
+═══════════════════════════════════════════════ */
+@keyframes spin{to{transform:rotate(360deg)}}
+.think-spinner{
+  display:inline-block;width:14px;height:14px;border-radius:50%;flex-shrink:0;
+  border:2px solid rgba(167,139,250,.2);border-top-color:var(--accent);
+  animation:spin .7s linear infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+.think-pulse{animation:pulse 1.4s ease-in-out infinite;color:var(--accent)}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media(max-width:480px){
+  .puzzle-grid{grid-template-columns:repeat(5,1fr)}
+  .logo-title{font-size:1.7rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     MAIN MENU
+══════════════════════════════════════════ -->
+<div id="menu-screen" class="screen on">
+  <div class="logo-wrap">
+    <img class="logo-icon" src="chess-icon-192.png" onerror="this.style.display='none'">
+    <div class="logo-title">♟ ZXT Chess</div>
+    <div class="logo-sub">国际象棋 · 学习 &amp; 对战</div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px">
+    <div class="card" onclick="showScreen('learn-menu-screen')">
+      <div class="card-row">
+        <div class="card-icon">📚</div>
+        <div>
+          <div class="card-title">学习模式</div>
+          <div class="card-desc">开局训练 · 战术组合 · 残局练习</div>
+        </div>
+        <div class="card-arr">›</div>
+      </div>
+    </div>
+    <div class="card" onclick="showScreen('battle-diff-screen')">
+      <div class="card-row">
+        <div class="card-icon">⚔️</div>
+        <div>
+          <div class="card-title">自由对战</div>
+          <div class="card-desc">与 AI 对弈，三档难度可选</div>
+        </div>
+        <div class="card-arr">›</div>
+      </div>
+      <div class="card-badge">vs AI</div>
+    </div>
+  </div>
+
+  <div style="margin-top:auto;padding-top:24px;font-size:.72rem;color:var(--text-dim);text-align:center">
+    ZXT Chess · Powered by chess.js &amp; Stockfish
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LEARN MENU
+══════════════════════════════════════════ -->
+<div id="learn-menu-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('menu-screen')">‹ 返回</button>
+  <div class="screen-title">学习模式</div>
+  <div class="screen-sub">系统学习国际象棋基础</div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;width:100%;max-width:420px">
+    <div class="card" onclick="showScreen('opening-select-screen')">
+      <div class="card-row">
+        <div class="card-icon">🏛️</div>
+        <div>
+          <div class="card-title">开局训练</div>
+          <div class="card-desc">5个经典开局 · 逐步引导 · 学习最优走法</div>
+        </div>
+        <div class="card-arr">›</div>
+      </div>
+    </div>
+    <div class="card" onclick="showScreen('tactics-screen')">
+      <div class="card-row">
+        <div class="card-icon">⚡</div>
+        <div>
+          <div class="card-title">战术组合</div>
+          <div class="card-desc">20道战术题 · 一步到三步杀 · 提升计算力</div>
+        </div>
+        <div class="card-arr">›</div>
+      </div>
+      <div class="card-badge">20题</div>
+    </div>
+    <div class="card" onclick="showScreen('endgame-screen')">
+      <div class="card-row">
+        <div class="card-icon">🏁</div>
+        <div>
+          <div class="card-title">残局练习</div>
+          <div class="card-desc">20道残局题 · 车残局/后残局/兵升变</div>
+        </div>
+        <div class="card-arr">›</div>
+      </div>
+      <div class="card-badge">20题</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     OPENING SELECT
+══════════════════════════════════════════ -->
+<div id="opening-select-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('learn-menu-screen')">‹ 返回</button>
+  <div class="screen-title">开局训练</div>
+  <div class="screen-sub">选择一个开局开始学习</div>
+  <div class="opening-list" id="opening-list"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TACTICS PUZZLE LIST
+══════════════════════════════════════════ -->
+<div id="tactics-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('learn-menu-screen')">‹ 返回</button>
+  <div class="screen-title">战术组合</div>
+  <div class="screen-sub">找到最强的一手棋，将军或赢取子力</div>
+  <div class="puzzle-grid" id="tactics-grid"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     ENDGAME PUZZLE LIST
+══════════════════════════════════════════ -->
+<div id="endgame-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('learn-menu-screen')">‹ 返回</button>
+  <div class="screen-title">残局练习</div>
+  <div class="screen-sub">将军制胜，练习精准的残局技巧</div>
+  <div class="puzzle-grid" id="endgame-grid"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     BATTLE DIFFICULTY
+══════════════════════════════════════════ -->
+<div id="battle-diff-screen" class="screen">
+  <button class="back-btn" onclick="showScreen('menu-screen')">‹ 返回</button>
+  <div class="screen-title">自由对战</div>
+  <div class="screen-sub">选择难度，执白或执黑均可</div>
+
+  <div class="diff-grid" style="margin-bottom:16px">
+    <div class="diff-card selected" id="diff-easy" onclick="selectDiff('easy')">
+      <div class="diff-dot easy"></div>
+      <div>
+        <div class="diff-name">入门</div>
+        <div class="diff-desc">随机走法 + 吃子优先，适合初学者</div>
+      </div>
+    </div>
+    <div class="diff-card" id="diff-medium" onclick="selectDiff('medium')">
+      <div class="diff-dot medium"></div>
+      <div>
+        <div class="diff-name">进阶</div>
+        <div class="diff-desc">Stockfish 技术等级 5，有一定战术意识</div>
+      </div>
+    </div>
+    <div class="diff-card" id="diff-hard" onclick="selectDiff('hard')">
+      <div class="diff-dot hard"></div>
+      <div>
+        <div class="diff-name">挑战</div>
+        <div class="diff-desc">Stockfish 全力计算，极强，慎入</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:12px;width:100%;max-width:420px">
+    <button class="btn btn-ghost btn-full" onclick="startBattle('black')" style="flex:1">执黑先行</button>
+    <button class="btn btn-primary btn-full" onclick="startBattle('white')" style="flex:1">执白后手</button>
+  </div>
+  <div style="font-size:.72rem;color:var(--text-dim);margin-top:10px;text-align:center">国际象棋白方先行，执白 = 你先走</div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     BATTLE GAME SCREEN
+══════════════════════════════════════════ -->
+<div id="battle-screen" class="screen">
+  <div class="game-top">
+    <button class="game-top-back" onclick="confirmExit('battle')">‹</button>
+    <div class="game-top-info">
+      <div class="game-top-title" id="bt-title">自由对战</div>
+      <div class="game-top-sub" id="bt-sub">进阶难度</div>
+    </div>
+    <div class="game-top-right">
+      <div style="font-size:.75rem;color:var(--text-mid)" id="bt-moves">0步</div>
+      <div style="font-size:.7rem;color:var(--text-dim)" id="bt-caps">提子 —</div>
+    </div>
+  </div>
+
+  <div class="game-main">
+    <div class="board-wrap">
+      <canvas id="battle-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="game-status">
+    <div class="status-turn">
+      <div class="turn-dot white" id="bt-turn-dot"></div>
+      <span id="bt-turn-text">白方回合</span>
+      <span class="think-spinner" id="bt-spinner" style="display:none"></span>
+    </div>
+    <div class="status-msg" id="bt-check-msg"></div>
+    <div class="status-captured" id="bt-think-msg"></div>
+  </div>
+
+  <div class="game-bottom">
+    <button class="btn btn-ghost" onclick="battleUndo()">↩ 悔棋</button>
+    <button class="btn btn-ghost" onclick="flipBoard()">⟳ 翻转</button>
+    <button class="btn btn-danger btn-full-row" onclick="confirmExit('battle')">🏳 认输 / 退出</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LEARN PLAY SCREEN (opening / puzzle / endgame)
+══════════════════════════════════════════ -->
+<div id="learn-play-screen" class="screen">
+  <div class="game-top">
+    <button class="game-top-back" id="lp-back-btn" onclick="exitLearnPlay()">‹</button>
+    <div class="game-top-info">
+      <div class="game-top-title" id="lp-title">开局训练</div>
+      <div class="game-top-sub" id="lp-sub">西西里防御</div>
+    </div>
+    <div class="game-top-right">
+      <div style="font-size:.75rem;color:var(--accent);font-weight:700" id="lp-progress"></div>
+    </div>
+  </div>
+
+  <!-- Opening progress bar -->
+  <div class="prog-bar-wrap" id="lp-progbar-wrap" style="padding:6px 14px 0;display:none">
+    <div class="prog-bar-bg"><div class="prog-bar-fill" id="lp-prog-fill" style="width:0%"></div></div>
+    <div class="prog-label">
+      <span id="lp-prog-step">步骤 0/0</span>
+      <span id="lp-prog-pct">0%</span>
+    </div>
+  </div>
+
+  <div class="game-main">
+    <div class="board-wrap">
+      <canvas id="learn-canvas"></canvas>
+    </div>
+  </div>
+
+  <div class="hint-panel" id="lp-hint">
+    <span class="hint-icon">💡</span>
+    <span class="hint-text" id="lp-hint-text">请走出正确的一步棋</span>
+  </div>
+
+  <div class="game-status">
+    <div class="status-turn">
+      <div class="turn-dot white" id="lp-turn-dot"></div>
+      <span id="lp-turn-text">白方回合</span>
+    </div>
+    <div class="status-msg" id="lp-check-msg"></div>
+  </div>
+
+  <div class="game-bottom">
+    <button class="btn btn-ghost" onclick="learnUndo()">↩ 撤销</button>
+    <button class="btn btn-ghost" onclick="learnReset()">↺ 重置</button>
+    <button class="btn btn-secondary btn-full-row" id="lp-hint-btn" onclick="showHint()">💡 提示</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     MODALS
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="gameover-modal">
+  <div class="modal">
+    <div class="modal-icon" id="go-icon">🎉</div>
+    <div class="modal-title" id="go-title">游戏结束</div>
+    <div class="modal-body" id="go-body">—</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('gameover-modal');showScreen('menu-screen')">返回主菜单</button>
+      <button class="btn btn-primary" id="go-replay-btn" onclick="replayBattle()">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="puzzle-ok-modal">
+  <div class="modal">
+    <div class="modal-icon" id="pok-icon">✅</div>
+    <div class="modal-title" id="pok-title">答对了！</div>
+    <div class="modal-body" id="pok-body">—</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('puzzle-ok-modal')">再看看</button>
+      <button class="btn btn-primary" id="pok-next-btn" onclick="nextPuzzle()">下一题 ›</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="opening-done-modal">
+  <div class="modal">
+    <div class="modal-icon">🎓</div>
+    <div class="modal-title">开局学完了！</div>
+    <div class="modal-body" id="od-body">你已完成本开局的所有步骤。</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('opening-done-modal');showScreen('opening-select-screen')">选择其他开局</button>
+      <button class="btn btn-primary" onclick="closeModal('opening-done-modal');learnReset()">再练一次</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="exit-confirm-modal">
+  <div class="modal">
+    <div class="modal-icon">🚪</div>
+    <div class="modal-title">确定退出？</div>
+    <div class="modal-body">当前对局进度将丢失</div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" onclick="closeModal('exit-confirm-modal')">继续对战</button>
+      <button class="btn btn-danger" id="exit-confirm-btn">确定退出</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCRIPTS — chess.js (CDN)
+══════════════════════════════════════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════
+// SCREEN MANAGER
+// ═══════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('on'));
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('on'); el.scrollTop = 0; }
+}
+function closeModal(id) { document.getElementById(id).classList.remove('on'); }
+
+// ═══════════════════════════════════════════════════
+// CHESS BOARD RENDERER
+// ═══════════════════════════════════════════════════
+const PIECE_UNICODE = {
+  wK:'♔', wQ:'♕', wR:'♖', wB:'♗', wN:'♘', wP:'♙',
+  bK:'♚', bQ:'♛', bR:'♜', bB:'♝', bN:'♞', bP:'♟'
+};
+
+class ChessRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.flipped = false;
+    this.selectedSq = null;
+    this.legalSqs = [];
+    this.lastMove = null;
+    this.hintSq = null;
+    this._size = 0;
+    this._sq = 0;
+    this._ox = 0;
+    this._oy = 0;
+  }
+
+  setup() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = this.canvas.getBoundingClientRect();
+    const sz = Math.min(rect.width || 320, rect.height || 320);
+    this.canvas.width  = sz * dpr;
+    this.canvas.height = sz * dpr;
+    this.canvas.style.width  = sz + 'px';
+    this.canvas.style.height = sz + 'px';
+    this._size = sz * dpr;
+    // board is ~88% of canvas
+    const board = this._size * 0.88;
+    this._sq = board / 8;
+    this._ox = (this._size - board) / 2;
+    this._oy = (this._size - board) / 2;
+    this.ctx.scale(dpr, dpr);
+    this._dpr = dpr;
+  }
+
+  // convert rank/file to pixel center
+  sqCenter(file, rank) {
+    const f = this.flipped ? 7 - file : file;
+    const r = this.flipped ? rank : 7 - rank;
+    const sq = this._sq / this._dpr;
+    const ox = this._ox / this._dpr;
+    const oy = this._oy / this._dpr;
+    return { x: ox + f * sq + sq / 2, y: oy + r * sq + sq / 2 };
+  }
+
+  // get file/rank from pointer event
+  getSq(ex, ey) {
+    const rect = this.canvas.getBoundingClientRect();
+    const sq   = this._sq / this._dpr;
+    const ox   = this._ox / this._dpr;
+    const oy   = this._oy / this._dpr;
+    const px   = ex - rect.left;
+    const py   = ey - rect.top;
+    const fi = Math.floor((px - ox) / sq);
+    const ri = Math.floor((py - oy) / sq);
+    if (fi < 0 || fi > 7 || ri < 0 || ri > 7) return null;
+    const file = this.flipped ? 7 - fi : fi;
+    const rank = this.flipped ? ri : 7 - ri;
+    return { file, rank };
+  }
+
+  sqName(file, rank) {
+    return 'abcdefgh'[file] + (rank + 1);
+  }
+
+  draw(chess) {
+    const ctx  = this.ctx;
+    const dpr  = this._dpr;
+    const W    = this._size / dpr;
+    const sq   = this._sq / dpr;
+    const ox   = this._ox / dpr;
+    const oy   = this._oy / dpr;
+
+    ctx.clearRect(0, 0, W, W);
+
+    // ── Background
+    ctx.fillStyle = '#13131f';
+    ctx.fillRect(0, 0, W, W);
+
+    // ── Coordinates labels
+    const labelFont = Math.max(9, sq * 0.28);
+    ctx.font = `600 ${labelFont}px -apple-system,sans-serif`;
+    ctx.fillStyle = '#8888b0';
+    for (let i = 0; i < 8; i++) {
+      const fi = this.flipped ? 7 - i : i;
+      const ri = this.flipped ? i : 7 - i;
+      // file labels bottom
+      ctx.textAlign = 'center';
+      ctx.fillText('abcdefgh'[fi], ox + i * sq + sq / 2, oy + 8 * sq + sq * 0.55);
+      // rank labels left
+      ctx.textAlign = 'right';
+      ctx.fillText(ri + 1, ox - sq * 0.15, oy + i * sq + sq / 2 + labelFont * 0.35);
+    }
+
+    // ── Squares
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const fi = this.flipped ? 7 - f : f;
+        const ri = this.flipped ? r : 7 - r;
+        const sqName = this.sqName(fi, ri);
+        const isLight = (fi + ri) % 2 === 0;
+        const x = ox + f * sq;
+        const y = oy + r * sq;
+
+        // base color
+        let col = isLight ? '#d4b896' : '#8b5e3c';
+
+        // last move highlight
+        if (this.lastMove && (sqName === this.lastMove.from || sqName === this.lastMove.to)) {
+          col = isLight ? '#f6f669' : '#bbc926';
+        }
+
+        ctx.fillStyle = col;
+        ctx.fillRect(x, y, sq, sq);
+
+        // selected
+        if (this.selectedSq && sqName === this.selectedSq) {
+          ctx.fillStyle = 'rgba(100,200,100,.55)';
+          ctx.fillRect(x, y, sq, sq);
+        }
+
+        // hint
+        if (this.hintSq && sqName === this.hintSq) {
+          ctx.fillStyle = 'rgba(251,191,36,.55)';
+          ctx.fillRect(x, y, sq, sq);
+        }
+
+        // legal move dots
+        if (this.legalSqs.includes(sqName)) {
+          const piece = chess.get(sqName);
+          if (piece) {
+            // ring for capture
+            ctx.strokeStyle = 'rgba(0,0,0,.35)';
+            ctx.lineWidth = sq * 0.08;
+            ctx.beginPath();
+            ctx.arc(x + sq/2, y + sq/2, sq * 0.44, 0, Math.PI*2);
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = 'rgba(0,0,0,.2)';
+            ctx.beginPath();
+            ctx.arc(x + sq/2, y + sq/2, sq * 0.14, 0, Math.PI*2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    // ── Pieces
+    const fontSize = sq * 0.78;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (let r = 0; r < 8; r++) {
+      for (let f = 0; f < 8; f++) {
+        const fi = this.flipped ? 7 - f : f;
+        const ri = this.flipped ? r : 7 - r;
+        const sqName = this.sqName(fi, ri);
+        const piece = chess.get(sqName);
+        if (!piece) continue;
+        const key = piece.color + piece.type.toUpperCase();
+        const sym = PIECE_UNICODE[key];
+        if (!sym) continue;
+        const cx = ox + f * sq + sq / 2;
+        const cy = oy + r * sq + sq / 2;
+        // shadow
+        ctx.font = `${fontSize}px serif`;
+        ctx.fillStyle = 'rgba(0,0,0,.4)';
+        ctx.fillText(sym, cx + sq*0.03, cy + sq*0.04);
+        // piece
+        ctx.fillStyle = piece.color === 'w' ? '#fffef0' : '#1a1a1a';
+        if (piece.color === 'w') {
+          ctx.strokeStyle = '#8b5e3c';
+          ctx.lineWidth = sq * 0.04;
+          ctx.strokeText(sym, cx, cy);
+        }
+        ctx.fillText(sym, cx, cy);
+      }
+    }
+
+    // ── Check highlight (king square)
+    if (chess.in_check()) {
+      const board = chess.board();
+      const turn  = chess.turn();
+      outer:
+      for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+          const p = board[r][f];
+          if (p && p.color === turn && p.type === 'k') {
+            const fi = this.flipped ? 7 - f : f;
+            const ri = this.flipped ? r : 7 - r;
+            const df = this.flipped ? f : 7 - r;
+            // recalculate display position
+            const rank = 7 - r;
+            const fIdx = this.flipped ? 7 - f : f;
+            const rIdx = this.flipped ? r : 7 - rank;
+            const x = ox + fIdx * sq;
+            const y = oy + rIdx * sq;
+            ctx.fillStyle = 'rgba(239,68,68,.35)';
+            ctx.fillRect(x, y, sq, sq);
+            break outer;
+          }
+        }
+      }
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// OPENING DATA
+// ═══════════════════════════════════════════════════
+const OPENINGS = [
+  {
+    id:'sicilian', name:'西西里防御', icon:'🛡️',
+    color:'rgba(167,139,250,.15)',
+    desc:'最流行的对抗1.e4的防御体系',
+    moves:[
+      {san:'e4',  hint:'白方占据中心，走e4'},
+      {san:'c5',  hint:'黑方走c5，西西里防御的标志性应对'},
+      {san:'Nf3', hint:'白方发展马到f3，控制d4和e5'},
+      {san:'d6',  hint:'黑方走d6，为主教开路并支持e5推进'},
+      {san:'d4',  hint:'白方d4，用兵换兵夺取中心'},
+      {san:'cxd4',hint:'黑方吃掉d4兵，打开c列'},
+      {san:'Nxd4',hint:'白方马吃d4，重占中心'},
+      {san:'Nf6', hint:'黑方Nf6，发展子力同时攻击e4'},
+      {san:'Nc3', hint:'白方Nc3，发展马并保护e4'},
+      {san:'a6',  hint:'黑方a6（纳伊多夫变例），防止白方Bb5+'},
+      {san:'Be3', hint:'白方Be3，准备f3和后续攻击'},
+      {san:'e5',  hint:'黑方e5，攻击白方d4马，西西里核心反击'}
+    ]
+  },
+  {
+    id:'spanish', name:'西班牙开局', icon:'⚔️',
+    color:'rgba(248,113,113,.12)',
+    desc:'最古老也最深刻的1.e4开局体系',
+    moves:[
+      {san:'e4',  hint:'白方e4，控制中心'},
+      {san:'e5',  hint:'黑方e5，对称应对，争夺中心'},
+      {san:'Nf3', hint:'白方Nf3，攻击黑方e5兵'},
+      {san:'Nc6', hint:'黑方Nc6，保护e5兵'},
+      {san:'Bb5', hint:'白方Bb5，西班牙开局的标志性走法，间接攻击e5兵'},
+      {san:'a6',  hint:'黑方a6（莫尔菲防御），逼迫白方表态'},
+      {san:'Ba4', hint:'白方Ba4，主教撤退但保持压力'},
+      {san:'Nf6', hint:'黑方Nf6，发展子力并反攻e4'},
+      {san:'O-O', hint:'白方王翼易位，国王安全'},
+      {san:'Be7', hint:'黑方Be7，准备易位'},
+      {san:'Re1', hint:'白方Re1，车占开放列，支持中心'},
+      {san:'b5',  hint:'黑方b5，逼走白方主教'}
+    ]
+  },
+  {
+    id:'italian', name:'意大利开局', icon:'🎭',
+    color:'rgba(74,222,128,.12)',
+    desc:'适合初学者的经典开局，发展快速',
+    moves:[
+      {san:'e4',  hint:'白方e4，占据中心'},
+      {san:'e5',  hint:'黑方e5，对称抢中心'},
+      {san:'Nf3', hint:'白方Nf3，发展马并攻击e5'},
+      {san:'Nc6', hint:'黑方Nc6，保护e5兵'},
+      {san:'Bc4', hint:'白方Bc4，意大利主教，瞄准黑方f7弱点'},
+      {san:'Bc5', hint:'黑方Bc5，对称发展，互相攻击'},
+      {san:'c3',  hint:'白方c3，准备d4推中心'},
+      {san:'Nf6', hint:'黑方Nf6，发展子力并攻击e4'},
+      {san:'d4',  hint:'白方d4，强力挺进中心'},
+      {san:'exd4',hint:'黑方吃掉d4兵'},
+      {san:'cxd4',hint:'白方兵取回，建立强大中心'},
+      {san:'Bb4+',hint:'黑方Bb4+，将军迫使白方应对'}
+    ]
+  },
+  {
+    id:'french', name:'法国防御', icon:'🗼',
+    color:'rgba(251,191,36,.12)',
+    desc:'坚实的封闭体系，反击有力',
+    moves:[
+      {san:'e4',  hint:'白方e4'},
+      {san:'e6',  hint:'黑方e6，法国防御的第一步，准备d5'},
+      {san:'d4',  hint:'白方d4，建立兵链'},
+      {san:'d5',  hint:'黑方d5，挑战白方中心'},
+      {san:'Nc3', hint:'白方Nc3，保护e4兵（变例之一）'},
+      {san:'Nf6', hint:'黑方Nf6，发展并攻击e4'},
+      {san:'e5',  hint:'白方e5推进，法国封闭体系开始'},
+      {san:'Nfd7',hint:'黑方马撤退，准备c5反击'},
+      {san:'f4',  hint:'白方f4，支持e5兵并准备进攻'},
+      {san:'c5',  hint:'黑方c5，反击白方d4，法国防御核心'},
+      {san:'Nf3', hint:'白方Nf3，巩固中心'},
+      {san:'Nc6', hint:'黑方Nc6，发展并增加对d4的压力'}
+    ]
+  },
+  {
+    id:'english', name:'英国开局', icon:'👑',
+    color:'rgba(56,189,248,.12)',
+    desc:'灵活的侧翼开局，避免早期对称',
+    moves:[
+      {san:'c4',  hint:'白方c4，英国开局！控制d5但不占e4'},
+      {san:'e5',  hint:'黑方e5，占据中心'},
+      {san:'Nc3', hint:'白方Nc3，发展马并攻击d5'},
+      {san:'Nf6', hint:'黑方Nf6，发展并准备d5'},
+      {san:'Nf3', hint:'白方Nf3，继续发展'},
+      {san:'Nc6', hint:'黑方Nc6，发展并巩固e5'},
+      {san:'g3',  hint:'白方g3，准备主教斜挂（英国体系标志）'},
+      {san:'d5',  hint:'黑方d5，挑战白方c4兵'},
+      {san:'cxd5',hint:'白方吃d5'},
+      {san:'Nxd5',hint:'黑方马取回d5'},
+      {san:'Bg2', hint:'白方Bg2，主教斜挂，控制长对角线'},
+      {san:'Be7', hint:'黑方Be7，发展主教，准备易位'}
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════════
+// TACTICS PUZZLES DATA (20道)
+// ═══════════════════════════════════════════════════
+const TACTICS = [
+  // 1-step mates & wins
+  {id:1,  title:'一步将死', diff:'easy',   fen:'r1bqkb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4', solution:['Bxf7+'], desc:'白方主教吃f7，将死黑王！'},
+  {id:2,  title:'后叉将',   diff:'easy',   fen:'rnb1kbnr/pppp1ppp/8/4p3/6Pq/5P2/PPPPP2P/RNBQKBNR w KQkq - 1 3',      solution:['e3'],    desc:'推e3赶走黑后，同时解决威胁'},
+  {id:3,  title:'马将军',   diff:'easy',   fen:'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3',  solution:['Nxe5'],  desc:'马吃e5，同时攻击两个子'},
+  {id:4,  title:'后将',     diff:'easy',   fen:'rnbqkbnr/ppp2ppp/3p4/4p3/4PP2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3',      solution:['Qh5'],   desc:'后到h5，同时攻击e5和f7'},
+  {id:5,  title:'叉子战术', diff:'easy',   fen:'r1bqkbnr/pppp1ppp/2n5/8/3pP3/5N2/PPP2PPP/RNBQKB1R w KQkq - 0 4',    solution:['Nxd4'],  desc:'马吃d4，叉击c6马和后'},
+  // 2-step combinations
+  {id:6,  title:'双将连击', diff:'medium', fen:'r1b1k1nr/ppppqppp/2n5/2b1p3/2B1P3/2N2N2/PPPP1PPP/R1BQ1RK1 w kq - 4 5',solution:['Nxe5','Nxf7'], desc:'马吃e5，再跳f7！双将叉击'},
+  {id:7,  title:'牵制取子', diff:'medium', fen:'r1bqk2r/pppp1ppp/2n2n2/2b1p3/1PB1P3/5N2/P1PP1PPP/RNBQK2R w KQkq - 2 5',solution:['d4'],   desc:'d4推进，利用牵制赢子'},
+  {id:8,  title:'后闪将',   diff:'medium', fen:'r2qkb1r/ppp2ppp/2np1n2/4pb2/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 2 6',solution:['Bxf7+','Ng5+'], desc:'主教闪将，马跳g5再将！'},
+  {id:9,  title:'穿心将',   diff:'medium', fen:'r1bqkb1r/ppp2ppp/2np4/4p3/2BnP3/5N2/PPPP1PPP/RNBQ1RK1 w kq - 0 6',  solution:['Nxd4'], desc:'马吃d4，利用发现攻击'},
+  {id:10, title:'将死组合', diff:'medium', fen:'r1b1k2r/1pp1bppp/p1np1n2/q3p3/2BPP3/2N1BN2/PPP2PPP/R2QK2R w KQkq - 2 8',solution:['Bxf7+','Kd2'], desc:'主教f7闪将后收后！'},
+  // harder combinations
+  {id:11, title:'三步杀',   diff:'hard',   fen:'r1bqkb1r/ppp2ppp/2np1n2/4p3/2BPP3/2N2N2/PPP2PPP/R1BQK2R w KQkq - 2 6',solution:['d5'],   desc:'d5推进，封锁黑方展开'},
+  {id:12, title:'弃子攻杀', diff:'hard',   fen:'r2qkb1r/pp3ppp/2np1n2/2p1p3/2BPP1b1/2N2N2/PPP2PPP/R1BQ1RK1 w kq - 0 7',solution:['Bxf7+'],desc:'弃主教破开黑王防线！'},
+  {id:13, title:'马后炮',   diff:'hard',   fen:'r1b2rk1/pp3ppp/2pbpn2/q2p4/3P1B2/2NBP3/PP1Q1PPP/R3K2R w KQ - 4 10',  solution:['Nf5'],  desc:'马跳f5，发现攻击黑后'},
+  {id:14, title:'车将制胜', diff:'hard',   fen:'6k1/5pp1/7p/8/8/8/5PPP/3R2K1 w - - 0 1',                               solution:['Rd8+'], desc:'车将军，然后控制局面'},
+  {id:15, title:'后闪将杀', diff:'hard',   fen:'r4rk1/pp1b1ppp/1qnbpn2/3p4/3P1B2/2NBPN2/PP1Q1PPP/R3K2R w KQ - 0 10', solution:['Bxh7+'],desc:'主教牺牲，引开黑方防御'},
+  // advanced
+  {id:16, title:'双车联合', diff:'hard',   fen:'6k1/8/8/8/8/8/8/RR4K1 w - - 0 1', solution:['Ra8+'], desc:'双车联合将死，练习配合'},
+  {id:17, title:'后车杀法', diff:'hard',   fen:'6k1/8/8/8/8/8/8/R3Q1K1 w - - 0 1', solution:['Qe6'], desc:'后控制要道，配合车将死'},
+  {id:18, title:'主教对',   diff:'medium', fen:'8/8/4k3/8/8/4K3/8/2B1B3 w - - 0 1', solution:['Bd3'], desc:'双主教将死练习'},
+  {id:19, title:'闪击战术', diff:'medium', fen:'r3k2r/pp3ppp/2pb1n2/q2pp3/2BPP1b1/2N1BN2/PP1Q1PPP/R3K2R w KQkq - 0 9',solution:['d5'],  desc:'d5推进，闪击黑后'},
+  {id:20, title:'大师组合', diff:'hard',   fen:'r1bq1rk1/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQ - 0 9',   solution:['Nd5'],  desc:'马跳d5，发动复杂攻势'}
+];
+
+// ═══════════════════════════════════════════════════
+// ENDGAME PUZZLES DATA (20道)
+// ═══════════════════════════════════════════════════
+const ENDGAMES = [
+  // King & Queen vs King
+  {id:1,  title:'后王配合将死①', diff:'easy',   fen:'8/8/8/4k3/8/8/8/3QK3 w - - 0 1', solution:['Qd5+'], desc:'后逐步缩小黑王活动范围'},
+  {id:2,  title:'后王配合将死②', diff:'easy',   fen:'8/8/8/8/4k3/8/8/Q3K3 w - - 0 1', solution:['Qa4+'], desc:'后+王协作，将黑王逼到角落'},
+  // King & Rook vs King
+  {id:3,  title:'车王配合①',     diff:'easy',   fen:'8/8/8/8/8/4k3/8/R3K3 w - - 0 1', solution:['Ra3+'], desc:'车沿横排驱赶黑王'},
+  {id:4,  title:'车王配合②',     diff:'easy',   fen:'8/8/8/3k4/8/8/8/R3K3 w - - 0 1', solution:['Kd1'], desc:'白王靠近配合车将死'},
+  {id:5,  title:'车王对决',       diff:'easy',   fen:'8/8/8/8/4k3/8/8/R5K1 w - - 0 1', solution:['Ra4+'],desc:'用车切断黑王退路'},
+  // Pawn endgames
+  {id:6,  title:'兵升变①',       diff:'easy',   fen:'8/P7/8/8/8/8/8/k1K5 w - - 0 1', solution:['a8=Q+'],desc:'a兵升变为后，立即将军！'},
+  {id:7,  title:'兵升变②',       diff:'easy',   fen:'8/8/8/8/8/8/6P1/6Kk w - - 0 1', solution:['g4'],  desc:'推兵升变，黑王无法阻止'},
+  {id:8,  title:'关键格升变',     diff:'medium', fen:'8/8/8/8/8/2k5/2P5/2K5 w - - 0 1', solution:['Kd2'], desc:'白王进入关键格，确保升变'},
+  {id:9,  title:'对立王',         diff:'medium', fen:'8/8/8/3k4/8/3K4/3P4/8 w - - 0 1', solution:['Kc4'], desc:'对立王技术，白王占优'},
+  {id:10, title:'兵的突破',       diff:'medium', fen:'8/ppp5/8/PPP5/8/8/8/K5k1 w - - 0 1',solution:['b6'], desc:'经典的三兵突破！'},
+  // Rook endgames
+  {id:11, title:'吕西安诺夫将',   diff:'medium', fen:'8/8/8/8/8/5k2/R7/5K2 w - - 0 1',  solution:['Ra3+'],desc:'车在第三排将军，逐步逼杀'},
+  {id:12, title:'车残局活棋',     diff:'medium', fen:'8/8/8/8/3k4/8/3K4/R7 w - - 0 1',  solution:['Ra4+'],desc:'车切断黑王，白王配合'},
+  {id:13, title:'车后杀法',       diff:'medium', fen:'8/8/4k3/8/8/8/8/3R1K2 w - - 0 1',  solution:['Rd6+'],desc:'车控制第六排，配合白王'},
+  {id:14, title:'车三路将死',     diff:'hard',   fen:'5k2/8/8/8/8/8/8/R4K2 w - - 0 1',  solution:['Ra8+'],desc:'车后排将军，经典残局'},
+  {id:15, title:'王车配合',       diff:'hard',   fen:'8/8/8/4k3/8/4K3/8/7R w - - 0 1',  solution:['Rh5+'],desc:'车在第五排逐步驱赶'},
+  // Bishop & Knight
+  {id:16, title:'双主教将死①',   diff:'hard',   fen:'8/8/8/8/8/3k4/8/2BBK3 w - - 0 1', solution:['Bd3'], desc:'双主教配合王将死练习'},
+  {id:17, title:'主教兵残局',     diff:'medium', fen:'8/8/8/8/8/4k3/4P3/4KB2 w - - 0 1',solution:['Kf2'],desc:'主教+兵+王的协作'},
+  {id:18, title:'错色主教平局',   diff:'hard',   fen:'8/8/8/5k2/8/5K2/5P2/5B2 w - - 0 1',solution:['Ke3'],desc:'注意升变格颜色！'},
+  // Queen endgames
+  {id:19, title:'后兵残局',       diff:'medium', fen:'8/8/3k4/8/8/3K4/3Q4/8 w - - 0 1', solution:['Qd5+'],desc:'后逐步逼近黑王'},
+  {id:20, title:'后对车残局',     diff:'hard',   fen:'8/8/4k3/8/8/8/4K3/3QR3 w - - 0 1',solution:['Qd5+'],desc:'后+车的联合将死'}
+];
+
+// ═══════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════
+let battleChess    = null;
+let battleRenderer = null;
+let battleDiff     = 'easy';
+let playerColor    = 'w';      // 'w' or 'b'
+let aiThinking     = false;
+let stockfish      = null;
+let sfReady        = false;
+let battleFlipped  = false;
+
+let learnChess     = null;
+let learnRenderer  = null;
+let learnMode      = null;   // 'opening' | 'tactics' | 'endgame'
+let learnOpening   = null;   // current opening object
+let learnOpenStep  = 0;      // how many moves done in opening
+let learnPuzzle    = null;   // current puzzle object
+let learnPuzzleIdx = 0;
+let learnSolStep   = 0;      // solution step index
+let learnSelected  = null;
+let puzzleProgress = {};     // {id: 'done'|'wrong'}
+
+// ═══════════════════════════════════════════════════
+// STOCKFISH INIT
+// ═══════════════════════════════════════════════════
+function initStockfish() {
+  if (stockfish) return;
+  try {
+    stockfish = new Worker('https://cdnjs.cloudflare.com/ajax/libs/stockfish.js/10.0.2/stockfish.js');
+    stockfish.onmessage = e => onSFMessage(e.data);
+    stockfish.postMessage('uci');
+    stockfish.postMessage('isready');
+    sfReady = true;
+  } catch(err) {
+    console.warn('Stockfish load failed:', err);
+    sfReady = false;
+  }
+}
+
+function onSFMessage(msg) {
+  if (msg.startsWith('bestmove')) {
+    const parts = msg.split(' ');
+    const best  = parts[1];
+    if (best && best !== '(none)') applyAIMove(best);
+    else endBattleGame('stalemate');
+  }
+}
+
+function sfSend(cmd) {
+  if (stockfish) stockfish.postMessage(cmd);
+}
+
+// ═══════════════════════════════════════════════════
+// DIFFICULTY SELECT
+// ═══════════════════════════════════════════════════
+function selectDiff(d) {
+  battleDiff = d;
+  ['easy','medium','hard'].forEach(x => {
+    document.getElementById('diff-'+x).classList.toggle('selected', x===d);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// BATTLE MODE
+// ═══════════════════════════════════════════════════
+function startBattle(color) {
+  playerColor = color === 'white' ? 'w' : 'b';
+  battleChess = new Chess();
+  battleFlipped = (playerColor === 'b');
+
+  const cv = document.getElementById('battle-canvas');
+  battleRenderer = new ChessRenderer(cv);
+  battleRenderer.flipped = battleFlipped;
+
+  document.getElementById('bt-title').textContent = '自由对战';
+  const diffNames = {easy:'入门',medium:'进阶',hard:'挑战'};
+  document.getElementById('bt-sub').textContent   = diffNames[battleDiff] + '难度';
+
+  showScreen('battle-screen');
+  setTimeout(() => {
+    battleRenderer.setup();
+    battleRenderer.draw(battleChess);
+    setupBattleCanvas();
+    updateBattleStatus();
+    // If player is black, AI goes first
+    if (playerColor === 'b') {
+      setTimeout(doAIMove, 600);
+    }
+  }, 80);
+
+  initStockfish();
+}
+
+function setupBattleCanvas() {
+  const cv = document.getElementById('battle-canvas');
+  cv.style.touchAction = 'none';
+  cv.onpointerdown = e => { e.preventDefault(); handleBattleClick(e); };
+}
+
+function handleBattleClick(e) {
+  if (!battleChess || aiThinking) return;
+  if (battleChess.turn() !== playerColor) return;
+
+  const sq = battleRenderer.getSq(e.clientX, e.clientY);
+  if (!sq) return;
+  const sqName = battleRenderer.sqName(sq.file, sq.rank);
+  const piece   = battleChess.get(sqName);
+
+  if (battleRenderer.selectedSq) {
+    // try move
+    const move = tryMove(battleChess, battleRenderer.selectedSq, sqName);
+    if (move) {
+      battleRenderer.selectedSq = null;
+      battleRenderer.legalSqs   = [];
+      battleRenderer.lastMove   = { from: move.from, to: move.to };
+      battleRenderer.draw(battleChess);
+      updateBattleStatus();
+      if (checkBattleEnd()) return;
+      // AI move
+      aiThinking = true;
+      document.getElementById('bt-spinner').style.display = 'inline-block';
+      document.getElementById('bt-think-msg').textContent = 'AI思考中…';
+      setTimeout(doAIMove, 200);
+      return;
+    }
+    // clicked own piece → re-select
+    if (piece && piece.color === playerColor) {
+      selectBattleSq(sqName);
+      return;
+    }
+    // deselect
+    battleRenderer.selectedSq = null;
+    battleRenderer.legalSqs   = [];
+    battleRenderer.draw(battleChess);
+    return;
+  }
+
+  if (piece && piece.color === playerColor) {
+    selectBattleSq(sqName);
+  }
+}
+
+function selectBattleSq(sqName) {
+  battleRenderer.selectedSq = sqName;
+  battleRenderer.legalSqs   = battleChess.moves({ square: sqName, verbose: true }).map(m => m.to);
+  battleRenderer.draw(battleChess);
+}
+
+function tryMove(chess, from, to) {
+  // try with promotion to queen
+  let move = chess.move({ from, to, promotion: 'q' });
+  return move;
+}
+
+async function doAIMove() {
+  if (!battleChess || battleChess.game_over()) {
+    aiThinking = false;
+    return;
+  }
+  const fen = battleChess.fen();
+
+  if (battleDiff === 'easy') {
+    // random move with slight preference for captures
+    const moves = battleChess.moves({ verbose: true });
+    const captures = moves.filter(m => m.flags.includes('c') || m.flags.includes('e'));
+    const chosen = captures.length && Math.random() < 0.7
+      ? captures[Math.floor(Math.random() * captures.length)]
+      : moves[Math.floor(Math.random() * moves.length)];
+    setTimeout(() => applyAIMove(chosen.from + chosen.to + (chosen.promotion || '')), 400);
+    return;
+  }
+
+  // Use stockfish
+  if (!sfReady) {
+    // fallback to minimax
+    const move = minimaxMove(battleChess, battleDiff === 'medium' ? 2 : 3);
+    if (move) setTimeout(() => applyAIMove(move.from + move.to + (move.promotion || '')), 400);
+    else endBattleGame('stalemate');
+    return;
+  }
+
+  const skillLevel = battleDiff === 'medium' ? 5 : 20;
+  sfSend('setoption name Skill Level value ' + skillLevel);
+  sfSend('position fen ' + fen);
+  const depth = battleDiff === 'medium' ? 10 : 18;
+  sfSend('go depth ' + depth);
+}
+
+function applyAIMove(uci) {
+  if (!battleChess) return;
+  const from = uci.slice(0,2);
+  const to   = uci.slice(2,4);
+  const promo = uci[4] || 'q';
+  const move = battleChess.move({ from, to, promotion: promo });
+  if (!move) { aiThinking = false; return; }
+
+  battleRenderer.lastMove   = { from: move.from, to: move.to };
+  battleRenderer.selectedSq = null;
+  battleRenderer.legalSqs   = [];
+  battleRenderer.draw(battleChess);
+  aiThinking = false;
+  document.getElementById('bt-spinner').style.display = 'none';
+  document.getElementById('bt-think-msg').textContent = '';
+  updateBattleStatus();
+  checkBattleEnd();
+}
+
+function checkBattleEnd() {
+  if (!battleChess.game_over()) return false;
+  setTimeout(() => {
+    if (battleChess.in_checkmate()) {
+      const winner = battleChess.turn() === 'w' ? '黑方' : '白方';
+      const isPlayerWin = battleChess.turn() !== playerColor;
+      showGameover(
+        isPlayerWin ? '🎉' : '🤖',
+        isPlayerWin ? '你赢了！' : 'AI获胜',
+        `${winner}将死，本局结束。`
+      );
+    } else if (battleChess.in_stalemate()) {
+      showGameover('🤝','逼和！','无子可动，平局（逼和）');
+    } else if (battleChess.in_draw()) {
+      showGameover('🤝','平局！','50步规则或重复局面，平局');
+    }
+  }, 300);
+  return true;
+}
+
+function endBattleGame(reason) {
+  aiThinking = false;
+  document.getElementById('bt-spinner').style.display = 'none';
+}
+
+function updateBattleStatus() {
+  if (!battleChess) return;
+  const turn = battleChess.turn();
+  const dot  = document.getElementById('bt-turn-dot');
+  const txt  = document.getElementById('bt-turn-text');
+  const chk  = document.getElementById('bt-check-msg');
+  const isPlayer = turn === playerColor;
+
+  dot.className = 'turn-dot ' + (turn === 'w' ? 'white' : 'black');
+  txt.textContent = turn === 'w'
+    ? (isPlayer ? '你的回合（白）' : 'AI回合（白）')
+    : (isPlayer ? '你的回合（黑）' : 'AI回合（黑）');
+
+  chk.textContent = battleChess.in_check() ? '将军！' : '';
+
+  const hist = battleChess.history();
+  document.getElementById('bt-moves').textContent = hist.length + '步';
+}
+
+function battleUndo() {
+  if (!battleChess || aiThinking) return;
+  battleChess.undo();
+  battleChess.undo();
+  battleRenderer.lastMove   = null;
+  battleRenderer.selectedSq = null;
+  battleRenderer.legalSqs   = [];
+  battleRenderer.draw(battleChess);
+  updateBattleStatus();
+}
+
+function flipBoard() {
+  if (!battleRenderer) return;
+  battleRenderer.flipped = !battleRenderer.flipped;
+  battleRenderer.draw(battleChess);
+}
+
+function replayBattle() {
+  closeModal('gameover-modal');
+  startBattle(playerColor === 'w' ? 'white' : 'black');
+}
+
+function confirmExit(mode) {
+  const btn = document.getElementById('exit-confirm-btn');
+  btn.onclick = () => { closeModal('exit-confirm-modal'); showScreen('menu-screen'); };
+  document.getElementById('exit-confirm-modal').classList.add('on');
+}
+
+function showGameover(icon, title, body) {
+  document.getElementById('go-icon').textContent  = icon;
+  document.getElementById('go-title').textContent = title;
+  document.getElementById('go-body').textContent  = body;
+  document.getElementById('gameover-modal').classList.add('on');
+}
+
+// ═══════════════════════════════════════════════════
+// SIMPLE MINIMAX (fallback when Stockfish unavailable)
+// ═══════════════════════════════════════════════════
+const PIECE_VALUE = { p:100, n:320, b:330, r:500, q:900, k:20000 };
+
+function evalBoard(chess) {
+  let score = 0;
+  const board = chess.board();
+  for (let r = 0; r < 8; r++) {
+    for (let f = 0; f < 8; f++) {
+      const p = board[r][f];
+      if (!p) continue;
+      const v = PIECE_VALUE[p.type] || 0;
+      score += p.color === 'w' ? v : -v;
+    }
+  }
+  return score;
+}
+
+function minimax(chess, depth, alpha, beta, maximizing) {
+  if (depth === 0 || chess.game_over()) return evalBoard(chess);
+  const moves = chess.moves();
+  if (maximizing) {
+    let best = -Infinity;
+    for (const m of moves) {
+      chess.move(m);
+      best = Math.max(best, minimax(chess, depth-1, alpha, beta, false));
+      chess.undo();
+      alpha = Math.max(alpha, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  } else {
+    let best = Infinity;
+    for (const m of moves) {
+      chess.move(m);
+      best = Math.min(best, minimax(chess, depth-1, alpha, beta, true));
+      chess.undo();
+      beta = Math.min(beta, best);
+      if (beta <= alpha) break;
+    }
+    return best;
+  }
+}
+
+function minimaxMove(chess, depth) {
+  const moves = chess.moves({ verbose: true });
+  if (!moves.length) return null;
+  const isMax = chess.turn() === 'w';
+  let best = isMax ? -Infinity : Infinity;
+  let bestMove = moves[0];
+  for (const m of moves) {
+    chess.move(m);
+    const val = minimax(chess, depth-1, -Infinity, Infinity, !isMax);
+    chess.undo();
+    if (isMax ? val > best : val < best) { best = val; bestMove = m; }
+  }
+  return bestMove;
+}
+
+// ═══════════════════════════════════════════════════
+// OPENING TRAINER UI
+// ═══════════════════════════════════════════════════
+function buildOpeningList() {
+  const list = document.getElementById('opening-list');
+  list.innerHTML = '';
+  OPENINGS.forEach(op => {
+    const div = document.createElement('div');
+    div.className = 'opening-card';
+    div.innerHTML = `
+      <div class="op-icon" style="background:${op.color}">${op.icon}</div>
+      <div>
+        <div class="op-name">${op.name}</div>
+        <div class="op-sub">${op.desc}</div>
+      </div>
+      <div class="op-moves">${op.moves.length}步</div>
+    `;
+    div.onclick = () => startOpening(op);
+    list.appendChild(div);
+  });
+}
+
+function startOpening(op) {
+  learnMode    = 'opening';
+  learnOpening = op;
+  learnOpenStep= 0;
+  learnChess   = new Chess();
+  learnSelected= null;
+
+  document.getElementById('lp-title').textContent   = '开局训练';
+  document.getElementById('lp-sub').textContent     = op.name;
+  document.getElementById('lp-progbar-wrap').style.display = 'block';
+  document.getElementById('lp-hint-btn').textContent = '💡 提示';
+  document.getElementById('lp-hint-btn').style.display = '';
+
+  showScreen('learn-play-screen');
+  setTimeout(() => {
+    const cv = document.getElementById('learn-canvas');
+    learnRenderer = new ChessRenderer(cv);
+    learnRenderer.flipped = false;
+    learnRenderer.setup();
+    learnRenderer.draw(learnChess);
+    setupLearnCanvas();
+    updateOpeningProgress();
+    updateLearnStatus();
+    // If first move is for black (shouldn't happen in standard openings), play it
+    playOpeningAIMoves();
+  }, 80);
+}
+
+function updateOpeningProgress() {
+  if (!learnOpening) return;
+  const total = learnOpening.moves.length;
+  const done  = learnOpenStep;
+  const pct   = Math.round(done / total * 100);
+  document.getElementById('lp-prog-fill').style.width = pct + '%';
+  document.getElementById('lp-prog-step').textContent = `步骤 ${done}/${total}`;
+  document.getElementById('lp-prog-pct').textContent  = pct + '%';
+  document.getElementById('lp-progress').textContent  = `${done}/${total}`;
+
+  const hint = learnOpening.moves[done];
+  document.getElementById('lp-hint-text').textContent =
+    hint ? hint.hint : '开局学习完成！';
+}
+
+// Play AI's moves in the opening sequence (when it's black's turn or after white)
+function playOpeningAIMoves() {
+  if (!learnOpening) return;
+  // current side to move
+  const turn = learnChess.turn();
+  const step = learnOpenStep;
+  const move = learnOpening.moves[step];
+  if (!move) return;
+  // The sequence alternates white/black naturally. If it's "the AI's step", play automatically.
+  // In opening trainer, WHITE moves are player, BLACK moves are AI
+  // Actually we'll have the player do white moves and auto-play black moves
+  if (turn === 'b') {
+    setTimeout(() => {
+      if (!learnChess) return;
+      const m = learnChess.move(move.san);
+      if (m) {
+        learnOpenStep++;
+        learnRenderer.lastMove = { from: m.from, to: m.to };
+        learnRenderer.draw(learnChess);
+        updateOpeningProgress();
+        updateLearnStatus();
+        if (learnOpenStep >= learnOpening.moves.length) {
+          openingComplete();
+        } else {
+          playOpeningAIMoves(); // recurse in case next is also black
+        }
+      }
+    }, 500);
+  }
+}
+
+function setupLearnCanvas() {
+  const cv = document.getElementById('learn-canvas');
+  cv.style.touchAction = 'none';
+  cv.onpointerdown = e => { e.preventDefault(); handleLearnClick(e); };
+}
+
+function handleLearnClick(e) {
+  if (!learnChess || !learnRenderer) return;
+
+  if (learnMode === 'opening') {
+    handleOpeningClick(e);
+  } else {
+    handlePuzzleClick(e);
+  }
+}
+
+function handleOpeningClick(e) {
+  const sq    = learnRenderer.getSq(e.clientX, e.clientY);
+  if (!sq) return;
+  const sqName = learnRenderer.sqName(sq.file, sq.rank);
+  const piece  = learnChess.get(sqName);
+  const turn   = learnChess.turn();
+
+  // Only player (white) clicks
+  if (turn !== 'w') return;
+
+  if (learnSelected) {
+    if (sqName === learnSelected) {
+      learnSelected = null;
+      learnRenderer.selectedSq = null;
+      learnRenderer.legalSqs   = [];
+      learnRenderer.draw(learnChess);
+      return;
+    }
+    // Try move
+    const move = tryMove(learnChess, learnSelected, sqName);
+    if (move) {
+      const expected = learnOpening.moves[learnOpenStep];
+      learnRenderer.selectedSq = null;
+      learnRenderer.legalSqs   = [];
+      if (move.san === expected.san || move.lan === expected.san ||
+          move.from + move.to === expected.san) {
+        // Correct!
+        learnOpenStep++;
+        learnRenderer.lastMove = { from: move.from, to: move.to };
+        learnRenderer.hintSq   = null;
+        learnRenderer.draw(learnChess);
+        updateOpeningProgress();
+        updateLearnStatus();
+        document.getElementById('lp-hint-text').textContent = '✅ 正确！' + (learnOpening.moves[learnOpenStep-1]?.hint || '');
+        if (learnOpenStep >= learnOpening.moves.length) {
+          openingComplete();
+        } else {
+          setTimeout(playOpeningAIMoves, 300);
+        }
+      } else {
+        // Wrong — undo
+        learnChess.undo();
+        learnRenderer.draw(learnChess);
+        showWrongHint();
+      }
+      learnSelected = null;
+      return;
+    }
+    // Clicked own piece → re-select
+    if (piece && piece.color === turn) {
+      learnSelected = sqName;
+      learnRenderer.selectedSq = sqName;
+      learnRenderer.legalSqs   = learnChess.moves({ square: sqName, verbose: true }).map(m => m.to);
+      learnRenderer.draw(learnChess);
+      return;
+    }
+    learnSelected = null;
+    learnRenderer.selectedSq = null;
+    learnRenderer.legalSqs   = [];
+    learnRenderer.draw(learnChess);
+    return;
+  }
+
+  if (piece && piece.color === turn) {
+    learnSelected = sqName;
+    learnRenderer.selectedSq = sqName;
+    learnRenderer.legalSqs   = learnChess.moves({ square: sqName, verbose: true }).map(m => m.to);
+    learnRenderer.draw(learnChess);
+  }
+}
+
+function showWrongHint() {
+  document.getElementById('lp-hint-text').textContent = '❌ 走法不对，请按提示走棋';
+  document.getElementById('lp-hint').style.background = 'rgba(248,113,113,.1)';
+  setTimeout(() => {
+    document.getElementById('lp-hint').style.background = '';
+    updateOpeningProgress();
+  }, 1200);
+}
+
+function showHint() {
+  if (!learnOpening || learnMode !== 'opening') return;
+  const step = learnOpening.moves[learnOpenStep];
+  if (!step) return;
+  // find the from square by checking legal moves
+  const moves = learnChess.moves({ verbose: true });
+  const match = moves.find(m => m.san === step.san);
+  if (match) {
+    learnRenderer.hintSq = match.from;
+    learnRenderer.draw(learnChess);
+    document.getElementById('lp-hint-text').textContent = '💡 提示：走 ' + step.san + ' — ' + step.hint;
+    setTimeout(() => { learnRenderer.hintSq = null; learnRenderer.draw(learnChess); }, 2000);
+  }
+}
+
+function openingComplete() {
+  setTimeout(() => {
+    document.getElementById('od-body').textContent =
+      `你已完成《${learnOpening.name}》的所有${learnOpening.moves.length}个步骤！`;
+    document.getElementById('opening-done-modal').classList.add('on');
+  }, 500);
+}
+
+// ═══════════════════════════════════════════════════
+// PUZZLE / ENDGAME TRAINER UI
+// ═══════════════════════════════════════════════════
+function buildPuzzleGrid(puzzles, gridId, mode) {
+  const grid = document.getElementById(gridId);
+  grid.innerHTML = '';
+  puzzles.forEach((pz, i) => {
+    const cell = document.createElement('div');
+    cell.className = 'puzzle-cell';
+    const prog = puzzleProgress[mode + pz.id];
+    if (prog === 'done')  cell.classList.add('done');
+    if (prog === 'wrong') cell.classList.add('wrong');
+
+    const diffColor = pz.diff === 'easy' ? '#4ade80' : pz.diff === 'medium' ? '#fbbf24' : '#f87171';
+    cell.innerHTML = `
+      <div class="puzzle-diff-badge" style="background:${diffColor}"></div>
+      <div class="pz-num">${i+1}</div>
+      <div class="pz-stars">${prog === 'done' ? '★★★' : '☆☆☆'}</div>
+    `;
+    cell.onclick = () => startPuzzle(pz, i, mode);
+    grid.appendChild(cell);
+  });
+}
+
+function startPuzzle(pz, idx, mode) {
+  learnMode      = mode;
+  learnPuzzle    = pz;
+  learnPuzzleIdx = idx;
+  learnSolStep   = 0;
+  learnSelected  = null;
+  learnChess     = new Chess(pz.fen);
+
+  const isTactics = mode === 'tactics';
+  document.getElementById('lp-title').textContent = isTactics ? '战术组合' : '残局练习';
+  document.getElementById('lp-sub').textContent   = `第${idx+1}题 · ${pz.title}`;
+  document.getElementById('lp-progbar-wrap').style.display = 'none';
+  document.getElementById('lp-progress').textContent = `${idx+1}/${isTactics ? TACTICS.length : ENDGAMES.length}`;
+  document.getElementById('lp-hint-text').textContent = pz.desc;
+  document.getElementById('lp-hint-btn').textContent = '💡 提示';
+
+  showScreen('learn-play-screen');
+  setTimeout(() => {
+    const cv = document.getElementById('learn-canvas');
+    learnRenderer = new ChessRenderer(cv);
+    // Orient board: white to move = normal, black to move = flip
+    learnRenderer.flipped = (learnChess.turn() === 'b');
+    learnRenderer.setup();
+    learnRenderer.draw(learnChess);
+    setupLearnCanvas();
+    updateLearnStatus();
+  }, 80);
+}
+
+function handlePuzzleClick(e) {
+  if (!learnChess || !learnPuzzle) return;
+  const sq     = learnRenderer.getSq(e.clientX, e.clientY);
+  if (!sq) return;
+  const sqName = learnRenderer.sqName(sq.file, sq.rank);
+  const piece  = learnChess.get(sqName);
+  const turn   = learnChess.turn();
+
+  if (learnSelected) {
+    if (sqName === learnSelected) {
+      learnSelected = null;
+      learnRenderer.selectedSq = null;
+      learnRenderer.legalSqs   = [];
+      learnRenderer.draw(learnChess);
+      return;
+    }
+    const move = tryMove(learnChess, learnSelected, sqName);
+    if (move) {
+      learnRenderer.selectedSq = null;
+      learnRenderer.legalSqs   = [];
+      learnSelected = null;
+      checkPuzzleSolution(move);
+      return;
+    }
+    if (piece && piece.color === turn) {
+      learnSelected = sqName;
+      learnRenderer.selectedSq = sqName;
+      learnRenderer.legalSqs   = learnChess.moves({ square: sqName, verbose: true }).map(m => m.to);
+      learnRenderer.draw(learnChess);
+      return;
+    }
+    learnSelected = null;
+    learnRenderer.selectedSq = null;
+    learnRenderer.legalSqs   = [];
+    learnRenderer.draw(learnChess);
+    return;
+  }
+
+  if (piece && piece.color === turn) {
+    learnSelected = sqName;
+    learnRenderer.selectedSq = sqName;
+    learnRenderer.legalSqs   = learnChess.moves({ square: sqName, verbose: true }).map(m => m.to);
+    learnRenderer.draw(learnChess);
+  }
+}
+
+function checkPuzzleSolution(move) {
+  const sol   = learnPuzzle.solution[learnSolStep];
+  const uci   = move.from + move.to + (move.promotion || '');
+  const isOk  = (move.san === sol || move.lan === sol || uci.startsWith(sol) || sol.startsWith(uci.slice(0,4)));
+
+  learnRenderer.lastMove = { from: move.from, to: move.to };
+  learnRenderer.draw(learnChess);
+
+  if (isOk) {
+    learnSolStep++;
+    if (learnSolStep >= learnPuzzle.solution.length) {
+      // Puzzle solved!
+      puzzleProgress[learnMode + learnPuzzle.id] = 'done';
+      document.getElementById('lp-hint-text').textContent = '🎉 ' + learnPuzzle.desc;
+      setTimeout(() => {
+        document.getElementById('pok-icon').textContent  = '✅';
+        document.getElementById('pok-title').textContent = '答对了！';
+        document.getElementById('pok-body').textContent  = learnPuzzle.desc;
+        const totalPz = learnMode === 'tactics' ? TACTICS : ENDGAMES;
+        const hasNext = learnPuzzleIdx < totalPz.length - 1;
+        document.getElementById('pok-next-btn').style.display = hasNext ? '' : 'none';
+        document.getElementById('puzzle-ok-modal').classList.add('on');
+      }, 500);
+    } else {
+      // More solution steps
+      document.getElementById('lp-hint-text').textContent = '✅ 继续，找出下一步！';
+      // Play opponent response if available
+      setTimeout(() => playPuzzleResponse(), 400);
+    }
+  } else {
+    // Wrong
+    puzzleProgress[learnMode + learnPuzzle.id] = 'wrong';
+    learnChess.undo();
+    learnRenderer.lastMove = null;
+    learnRenderer.draw(learnChess);
+    document.getElementById('lp-hint-text').textContent = '❌ 走法错误，再试试！';
+    document.getElementById('lp-hint').style.background = 'rgba(248,113,113,.1)';
+    setTimeout(() => { document.getElementById('lp-hint').style.background = ''; }, 1200);
+  }
+  updateLearnStatus();
+}
+
+function playPuzzleResponse() {
+  // After correct player move, play the "opponent" move if in solution
+  const sol = learnPuzzle.solution[learnSolStep];
+  if (!sol) return;
+  // Try to find the move matching solution notation
+  const moves = learnChess.moves({ verbose: true });
+  let match = moves.find(m => m.san === sol || m.from+m.to === sol.slice(0,4));
+  if (!match) match = moves[0]; // fallback
+  if (match) {
+    const m = learnChess.move(match);
+    if (m) {
+      learnSolStep++;
+      learnRenderer.lastMove = { from: m.from, to: m.to };
+      learnRenderer.draw(learnChess);
+      updateLearnStatus();
+    }
+  }
+}
+
+function nextPuzzle() {
+  closeModal('puzzle-ok-modal');
+  const arr = learnMode === 'tactics' ? TACTICS : ENDGAMES;
+  if (learnPuzzleIdx + 1 < arr.length) {
+    startPuzzle(arr[learnPuzzleIdx + 1], learnPuzzleIdx + 1, learnMode);
+  }
+}
+
+function showHintPuzzle() {
+  if (!learnPuzzle) return;
+  const sol = learnPuzzle.solution[learnSolStep];
+  if (!sol) return;
+  const moves = learnChess.moves({ verbose: true });
+  const match = moves.find(m => m.san === sol || m.from+m.to === sol.slice(0,4));
+  if (match) {
+    learnRenderer.hintSq = match.from;
+    learnRenderer.draw(learnChess);
+    document.getElementById('lp-hint-text').textContent = '💡 走 ' + (match.san || sol);
+    setTimeout(() => { learnRenderer.hintSq = null; learnRenderer.draw(learnChess); }, 2000);
+  }
+}
+
+// override showHint button to dispatch correctly
+function showHint() {
+  if (learnMode === 'opening') {
+    const step = learnOpening?.moves[learnOpenStep];
+    if (!step) return;
+    const moves = learnChess.moves({ verbose: true });
+    const match = moves.find(m => m.san === step.san);
+    if (match) {
+      learnRenderer.hintSq = match.from;
+      learnRenderer.draw(learnChess);
+      document.getElementById('lp-hint-text').textContent = '💡 走 ' + step.san + ' — ' + step.hint;
+      setTimeout(() => { learnRenderer.hintSq = null; learnRenderer.draw(learnChess); }, 2000);
+    }
+  } else {
+    showHintPuzzle();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// LEARN SCREEN COMMON
+// ═══════════════════════════════════════════════════
+function updateLearnStatus() {
+  if (!learnChess) return;
+  const turn = learnChess.turn();
+  document.getElementById('lp-turn-dot').className = 'turn-dot ' + (turn === 'w' ? 'white' : 'black');
+  document.getElementById('lp-turn-text').textContent = turn === 'w' ? '白方回合' : '黑方回合';
+  document.getElementById('lp-check-msg').textContent = learnChess.in_check() ? '将军！' : '';
+}
+
+function learnUndo() {
+  if (!learnChess) return;
+  if (learnMode === 'opening') {
+    if (learnOpenStep > 0) {
+      // Undo last two moves (player + AI)
+      const lastTurn = learnOpenStep % 2 === 0 ? 2 : 1;
+      for (let i = 0; i < lastTurn && learnOpenStep > 0; i++) {
+        learnChess.undo();
+        learnOpenStep--;
+      }
+      learnRenderer.lastMove   = null;
+      learnRenderer.selectedSq = null;
+      learnRenderer.legalSqs   = [];
+      learnRenderer.draw(learnChess);
+      updateOpeningProgress();
+      updateLearnStatus();
+    }
+  } else {
+    learnChess.undo();
+    learnSolStep = Math.max(0, learnSolStep - 1);
+    learnRenderer.lastMove   = null;
+    learnRenderer.selectedSq = null;
+    learnRenderer.legalSqs   = [];
+    learnRenderer.draw(learnChess);
+    updateLearnStatus();
+  }
+}
+
+function learnReset() {
+  if (learnMode === 'opening' && learnOpening) {
+    startOpening(learnOpening);
+  } else if (learnPuzzle) {
+    startPuzzle(learnPuzzle, learnPuzzleIdx, learnMode);
+  }
+}
+
+function exitLearnPlay() {
+  if (learnMode === 'opening') showScreen('opening-select-screen');
+  else if (learnMode === 'tactics') showScreen('tactics-screen');
+  else if (learnMode === 'endgame') showScreen('endgame-screen');
+  else showScreen('learn-menu-screen');
+}
+
+// ═══════════════════════════════════════════════════
+// RESIZE
+// ═══════════════════════════════════════════════════
+window.addEventListener('resize', () => {
+  if (battleChess && battleRenderer) {
+    battleRenderer.setup(); battleRenderer.draw(battleChess);
+  }
+  if (learnChess && learnRenderer) {
+    learnRenderer.setup(); learnRenderer.draw(learnChess);
+  }
+});
+
+// ═══════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════
+buildOpeningList();
+buildPuzzleGrid(TACTICS,  'tactics-grid',  'tactics');
+buildPuzzleGrid(ENDGAMES, 'endgame-grid', 'endgame');
+
+// Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./chess-sw.js').catch(()=>{});
+}
+
+</script>
+</body>
+</html>
