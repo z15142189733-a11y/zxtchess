@@ -1,5 +1,5 @@
 // ZXT Chess Service Worker
-const CACHE_NAME = 'zxtchess-v2';
+const CACHE_NAME = 'zxtchess-v3';
 const ASSETS = [
   './index.html',
   './chess-manifest.json',
